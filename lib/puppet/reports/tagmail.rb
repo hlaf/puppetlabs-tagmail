@@ -131,6 +131,10 @@ Puppet::Reports.register_report(:tagmail) do
       config_hash[:reportfrom] = 'Puppet Agent'
     end
 
+    if not config_hash[:use_ssl] or config_hash[:use_ssl] == ''
+      config_hash[:use_ssl] = false
+    end
+
     config_hash
   end
 
@@ -204,7 +208,11 @@ Puppet::Reports.register_report(:tagmail) do
     #Thread.new {
       if tagmail_conf[:smtpserver] and tagmail_conf[:smtpserver] != "none"
         begin
-          Net::SMTP.start(tagmail_conf[:smtpserver], tagmail_conf[:smtpport], tagmail_conf[:smtphelo]) do |smtp|
+          smtp = Net::SMTP.new(tagmail_conf[:smtpserver], tagmail_conf[:smtpport])
+          smtp.enable_ssl() if tagmail_conf[:use_ssl]
+          smtp.start(tagmail_conf[:smtphelo],
+                     tagmail_conf[:account],
+                     tagmail_conf[:password], :plain) do |smtp|
             reports.each do |emails, messages|
               smtp.open_message_stream(tagmail_conf[:reportfrom], *emails) do |p|
                 p.puts "From: #{tagmail_conf[:reportfrom]}"
